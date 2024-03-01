@@ -11,7 +11,6 @@ interface R6Profile {
     currentSeason: R6Season,
     level: number,
     lifetime: R6Lifetime | null,
-    maxRank: R6Rank,
     modified: number,
     operators: R6Operators | null,
     platform: R6RawPlatform,
@@ -44,10 +43,11 @@ interface R6LifetimeStats {
 
 export interface R6Season {
     casual: R6SeasonCasualStats,
-    ranked: R6SeasonRankedStats
+    ranked: R6SeasonRankedStats,
+    profileId?: string
 }
 
-interface R6SeasonCasualStats {
+export interface R6SeasonCasualStats {
     abandons: number,
     deaths: number,
     kdRatio: string,
@@ -57,7 +57,7 @@ interface R6SeasonCasualStats {
     wins: number
 }
 
-interface R6SeasonRankedStats {
+export interface R6SeasonRankedStats {
     abandons: number,
     championNumber: number,
     deaths: number,

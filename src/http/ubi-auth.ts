@@ -1,7 +1,7 @@
 import axios, { AxiosError } from 'axios'
 import config from '../configs/config.json'
 import { SaveJSONToFile } from '../utilities/file-stream'
-import { UbiAuthResponse } from '../utilities/interfaces/front_interfaces'
+import { R6UserResponse } from '../utilities/interfaces/http_interfaces'
 import { UbiAppId } from '../utilities/interfaces/enums'
 
 
@@ -12,7 +12,7 @@ import { UbiAppId } from '../utilities/interfaces/enums'
  * @param appId Ubi-AppId header value.
  * @returns Simplified token object.
  */
-async function RequestLogin(appId: UbiAppId): Promise<UbiAuthResponse | void> {
+async function RequestLogin(appId: UbiAppId): Promise<R6UserResponse | void> {
     const credentials = Buffer.from(`${config.ubi_credentials.email}:${config.ubi_credentials.password}`).toString('base64')
 
     const httpConfig = {
@@ -33,7 +33,7 @@ async function RequestLogin(appId: UbiAppId): Promise<UbiAuthResponse | void> {
 
     try {
         const response = await axios(httpConfig)
-        return response.data as UbiAuthResponse
+        return response.data as R6UserResponse
     }
     catch (error) {
         if (axios.isAxiosError(error)) {
@@ -61,10 +61,10 @@ async function RequestLogin(appId: UbiAppId): Promise<UbiAuthResponse | void> {
 export async function Login(): Promise<void> {
     try {
         const tokenV2 = await RequestLogin(UbiAppId.v2)
-        await SaveJSONToFile('private/auth_token_v2.json', tokenV2 as UbiAuthResponse)
+        await SaveJSONToFile('private/auth_token_v2.json', tokenV2 as R6UserResponse)
 
         const tokenV3 = await RequestLogin(UbiAppId.v3)
-        await SaveJSONToFile('private/auth_token_v3.json', tokenV3 as UbiAuthResponse)
+        await SaveJSONToFile('private/auth_token_v3.json', tokenV3 as R6UserResponse)
     }
     catch (error) { console.log(error) }
 }

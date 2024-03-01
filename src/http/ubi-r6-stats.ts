@@ -1,11 +1,13 @@
-import { R6Platform, R6Region, UbiAppId } from "../utilities/interfaces/enums";
+import { R6Platform, R6RawPlatform, R6Region, UbiAppId } from "../utilities/interfaces/enums";
 import { internalError } from "../utilities/errors";
-import { R6FullProfile, R6Lifetime, R6Season, R6Operators, R6User, R6Level } from "../utilities/interfaces/front_interfaces";
+import { R6FullProfile, R6Lifetime, R6Season, R6Operators, R6User, R6Level, R6SeasonRankedStats, R6SeasonCasualStats } from "../utilities/interfaces/front_interfaces";
 import Token from "../utilities/ubi-token";
 import config from '../configs/config.json'
 import axios from "axios";
 import { R6LevelResponse, R6OperatorsPlatform, R6OperatorsResponse, R6SeasonResponse, R6UserResponse, UbiToken } from "../utilities/interfaces/http_interfaces";
-import { AllSeasonCodes, CreateParameterString, Percent, Ratio } from "../utilities/r6-utilities";
+import { AllSeasonCodes, CreateParameterString, GetNextRankRankPoints, NextRankFromRank, Percent, PlatformFamily, PreviousRankFromRank, RankFromInt, RankPointProgress, Ratio } from "../utilities/r6-utilities";
+import { DEFAULT_MAX_VERSION } from "tls";
+import { secondsSinceEpoch } from "../utilities/timestamps";
 
 
 
@@ -22,16 +24,17 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
     let levelPromises: Promise<R6Level | void>[] = []
     let operatorsPromises: Promise<R6Operators | void>[] = []
     let lifetimePromises: Promise<R6Lifetime>[] // TODO
-    let currentSeasonPromise: Promise<R6Season> // TODO
+    let currentSeasonPromises: Promise<R6Season | void>[] = []
 
     let userData: R6User[] | void
     let levelData: (R6Level | void)[]
     let operatorsData: (R6Operators | void)[]
     let lifetimeData: R6Lifetime
-    let currentSeasonData: R6Season
+    let currentSeasonData: (R6Season | void)[]
 
     let levelDataMap: Map<string, number> = new Map()
     let operatorsDataMap: Map<string, R6Operators> = new Map()
+    let currentSeasonDataMap: Map<string, R6Season> = new Map()
 
 
 
@@ -63,6 +66,7 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
 
             levelPromises.push(RequestR6Level(user.userId, user.profileId, tokenV3))
             operatorsPromises.push(RequestR6Operators(user.userId, user.profileId, newPlatform, tokenV2))
+            currentSeasonPromises.push(RequestR6Season(user.userId, user.profileId, newPlatform, tokenV3))
         })
     }
     
@@ -70,6 +74,7 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
     
     levelData = await Promise.all(levelPromises)
     operatorsData = await Promise.all(operatorsPromises)
+    currentSeasonData = await Promise.all(currentSeasonPromises)
 
 
 
@@ -95,18 +100,26 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
         }
     })
 
+    currentSeasonData.forEach(currentSeason => {
+        if (currentSeason) {
+            currentSeasonDataMap.set(currentSeason.profileId!, {
+                casual: currentSeason.casual,
+                ranked: currentSeason.ranked
+            })
+        }
+    })
+
     userData.forEach(user => {
         const profileId = user.profileId
 
         fullProfiles.profiles?.set(profileId, {
-            currentSeason: ,
+            currentSeason: currentSeasonDataMap.get(profileId)!,
             level: levelDataMap.get(profileId) || 0,
             lifetime: ,
-            maxRank: ,
-            modified: ,
+            modified: secondsSinceEpoch(),
             operators: operatorsDataMap.get(profileId) || null,
-            platform: ,
-            profileId: ,
+            platform: user.platform as R6RawPlatform,
+            profileId: user.profileId,
         })
     })
 
@@ -432,7 +445,8 @@ async function RequestR6Operators(userId: string, profileId: string, platform: R
 }
 
 // limit 1 player
-async function RequestR6Season(userId: string, profileId: string, platform: R6Platform, token: UbiToken): Promise<R6Operators | void> {
+async function RequestR6Season(userId: string, profileId: string, platform: R6Platform, token: UbiToken): Promise<R6Season | void> {
+    const desiredPlatformFamily = PlatformFamily(platform)
     let newPlatform: string
 
     switch (platform) {
@@ -464,212 +478,78 @@ async function RequestR6Season(userId: string, profileId: string, platform: R6Pl
         const data = response.data as R6SeasonResponse
 
         let parsed: R6Season
+        let ranked: R6SeasonRankedStats | undefined
+        let casual: R6SeasonCasualStats | undefined
 
         if (data.platform_families_full_profiles) {
-            // platformFamily = 'pc' | 'console'
-            for (const platformFamily of data.platform_families_full_profiles) {
+            for (const platformFamilyData of data.platform_families_full_profiles) {
+                // 'pc' || 'console', used to compare with desired platform
+                const platformFamily = platformFamilyData.platform_family
+                
+                if (platformFamilyData.board_ids_full_profiles) {
+                    for (const board of platformFamilyData.board_ids_full_profiles) {
+                        // 'casual' || 'event' || 'warmup' || 'ranked'
+                        const gameMode = board.board_id
 
+                        if (board.full_profiles) {
+                            for (const profile of board.full_profiles) {
+                                const player = profile.profile
+                                
+                                const currentSeasonData = profile.season_statistics
+
+                                if (platformFamily === desiredPlatformFamily) {
+                                    const rank = RankFromInt(player.rank)
+                                    const maxRank = RankFromInt(player.max_rank)
+                                    const rankPoints = player.rank_points
+
+                                    if (gameMode === 'ranked') {
+                                        ranked = {
+                                            abandons: currentSeasonData.match_outcomes.abandons,
+                                            championNumber: player.top_rank_position,
+                                            deaths: currentSeasonData.deaths,
+                                            kdRatio: Ratio(currentSeasonData.kills, currentSeasonData.deaths),
+                                            kills: currentSeasonData.kills,
+                                            losses: currentSeasonData.match_outcomes.losses,
+                                            maxRank: maxRank,
+                                            maxRankPoints: player.max_rank_points,
+                                            nextRank: NextRankFromRank(rank),
+                                            nextRankByMaxRank: NextRankFromRank(maxRank),
+                                            nextRankRankPoints: GetNextRankRankPoints(rankPoints),
+                                            previousRank: PreviousRankFromRank(rank),
+                                            rank: rank,
+                                            rankPointProgress: RankPointProgress(rankPoints),
+                                            rankPoints: player.rank_points,
+                                            winPercent: Percent(currentSeasonData.match_outcomes.wins, currentSeasonData.match_outcomes.losses),
+                                            wins: currentSeasonData.match_outcomes.losses
+                                        }
+                                    }
+                                    else if (gameMode === 'casual') {
+                                        casual = {
+                                            abandons: currentSeasonData.match_outcomes.abandons,
+                                            deaths: currentSeasonData.deaths,
+                                            kdRatio: Ratio(currentSeasonData.kills, currentSeasonData.deaths),
+                                            kills: currentSeasonData.kills,
+                                            losses: currentSeasonData.match_outcomes.losses,
+                                            winPercent: Percent(currentSeasonData.match_outcomes.wins, currentSeasonData.match_outcomes.losses),
+                                            wins: currentSeasonData.match_outcomes.losses
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        
-        data.profileData.forEach((profileData) => {
-            let dataByPlatform: R6OperatorsPlatform | undefined
-
-            switch (newPlatform) {
-                case 'PC': dataByPlatform = profileData.platforms?.PC; break
-                case 'PLAYSTATION': dataByPlatform = profileData.platforms?.PS4; break
-                case 'XONE': dataByPlatform = profileData.platforms?.XONE; break
-                default: return
+        if (casual && ranked) {
+            return {
+                casual: casual,
+                ranked: ranked,
+                profileId: profileId
             }
-
-            if (!dataByPlatform || !dataByPlatform.gameModes) { return }
-            else {
-                const gameModes = dataByPlatform.gameModes
-                
-                if (gameModes.all) {
-                    const all = gameModes.all
-
-                    if (all.teamRoles) {
-                        let attackers = all.teamRoles.attacker || all.teamRoles.Attacker
-                        let defenders = all.teamRoles.defender || all.teamRoles.Defender
-                        
-                        attackers?.forEach((operatorData) => {
-                            const aces = Math.round(operatorData.roundsWithAnAce.value * operatorData.roundsPlayed)
-                            const clutches = Math.round(operatorData.roundsWithClutch.value * operatorData.roundsPlayed)
-                            
-                            parsed.overall.attackers!.set(operatorData.statsDetail, {
-                                aces: aces,
-                                clutches: clutches,
-                                deaths: operatorData.death,
-                                kdRatio: Ratio(operatorData.kills, operatorData.death),
-                                kills: operatorData.kills,
-                                losses: operatorData.roundsLost,
-                                minutesPlayed: operatorData.minutesPlayed,
-                                operator: operatorData.statsDetail,
-                                winPercent: Percent(operatorData.roundsWon, operatorData.roundsLost),
-                                wins: operatorData.roundsWon
-                            })
-                        })
-
-                        defenders?.forEach((operatorData) => {
-                            const aces = Math.round(operatorData.roundsWithAnAce.value * operatorData.roundsPlayed)
-                            const clutches = Math.round(operatorData.roundsWithClutch.value * operatorData.roundsPlayed)
-                            
-                            parsed.overall.defenders!.set(operatorData.statsDetail, {
-                                aces: aces,
-                                clutches: clutches,
-                                deaths: operatorData.death,
-                                kdRatio: Ratio(operatorData.kills, operatorData.death),
-                                kills: operatorData.kills,
-                                losses: operatorData.roundsLost,
-                                minutesPlayed: operatorData.minutesPlayed,
-                                operator: operatorData.statsDetail,
-                                winPercent: Percent(operatorData.roundsWon, operatorData.roundsLost),
-                                wins: operatorData.roundsWon
-                            })
-                        })
-                    }
-                }
-
-                if (gameModes.casual) {
-                    const casual = gameModes.casual
-
-                    if (casual.teamRoles) {
-                        let attackers = casual.teamRoles.attacker || casual.teamRoles.Attacker
-                        let defenders = casual.teamRoles.defender || casual.teamRoles.Defender
-                        
-                        attackers?.forEach((operatorData) => {
-                            const aces = Math.round(operatorData.roundsWithAnAce.value * operatorData.roundsPlayed)
-                            const clutches = Math.round(operatorData.roundsWithClutch.value * operatorData.roundsPlayed)
-                            
-                            parsed.casual.attackers!.set(operatorData.statsDetail, {
-                                aces: aces,
-                                clutches: clutches,
-                                deaths: operatorData.death,
-                                kdRatio: Ratio(operatorData.kills, operatorData.death),
-                                kills: operatorData.kills,
-                                losses: operatorData.roundsLost,
-                                minutesPlayed: operatorData.minutesPlayed,
-                                operator: operatorData.statsDetail,
-                                winPercent: Percent(operatorData.roundsWon, operatorData.roundsLost),
-                                wins: operatorData.roundsWon
-                            })
-                        })
-
-                        defenders?.forEach((operatorData) => {
-                            const aces = Math.round(operatorData.roundsWithAnAce.value * operatorData.roundsPlayed)
-                            const clutches = Math.round(operatorData.roundsWithClutch.value * operatorData.roundsPlayed)
-                            
-                            parsed.casual.defenders!.set(operatorData.statsDetail, {
-                                aces: aces,
-                                clutches: clutches,
-                                deaths: operatorData.death,
-                                kdRatio: Ratio(operatorData.kills, operatorData.death),
-                                kills: operatorData.kills,
-                                losses: operatorData.roundsLost,
-                                minutesPlayed: operatorData.minutesPlayed,
-                                operator: operatorData.statsDetail,
-                                winPercent: Percent(operatorData.roundsWon, operatorData.roundsLost),
-                                wins: operatorData.roundsWon
-                            })
-                        })
-                    }
-                }
-
-                if (gameModes.ranked) {
-                    const ranked = gameModes.ranked
-
-                    if (ranked.teamRoles) {
-                        let attackers = ranked.teamRoles.attacker || ranked.teamRoles.Attacker
-                        let defenders = ranked.teamRoles.defender || ranked.teamRoles.Defender
-                        
-                        attackers?.forEach((operatorData) => {
-                            const aces = Math.round(operatorData.roundsWithAnAce.value * operatorData.roundsPlayed)
-                            const clutches = Math.round(operatorData.roundsWithClutch.value * operatorData.roundsPlayed)
-                            
-                            parsed.ranked.attackers!.set(operatorData.statsDetail, {
-                                aces: aces,
-                                clutches: clutches,
-                                deaths: operatorData.death,
-                                kdRatio: Ratio(operatorData.kills, operatorData.death),
-                                kills: operatorData.kills,
-                                losses: operatorData.roundsLost,
-                                minutesPlayed: operatorData.minutesPlayed,
-                                operator: operatorData.statsDetail,
-                                winPercent: Percent(operatorData.roundsWon, operatorData.roundsLost),
-                                wins: operatorData.roundsWon
-                            })
-                        })
-
-                        defenders?.forEach((operatorData) => {
-                            const aces = Math.round(operatorData.roundsWithAnAce.value * operatorData.roundsPlayed)
-                            const clutches = Math.round(operatorData.roundsWithClutch.value * operatorData.roundsPlayed)
-                            
-                            parsed.ranked.defenders!.set(operatorData.statsDetail, {
-                                aces: aces,
-                                clutches: clutches,
-                                deaths: operatorData.death,
-                                kdRatio: Ratio(operatorData.kills, operatorData.death),
-                                kills: operatorData.kills,
-                                losses: operatorData.roundsLost,
-                                minutesPlayed: operatorData.minutesPlayed,
-                                operator: operatorData.statsDetail,
-                                winPercent: Percent(operatorData.roundsWon, operatorData.roundsLost),
-                                wins: operatorData.roundsWon
-                            })
-                        })
-                    }
-                }
-
-                if (gameModes.unranked) {
-                    const unranked = gameModes.unranked
-
-                    if (unranked.teamRoles) {
-                        let attackers = unranked.teamRoles.attacker || unranked.teamRoles.Attacker
-                        let defenders = unranked.teamRoles.defender || unranked.teamRoles.Defender
-                        
-                        attackers?.forEach((operatorData) => {
-                            const aces = Math.round(operatorData.roundsWithAnAce.value * operatorData.roundsPlayed)
-                            const clutches = Math.round(operatorData.roundsWithClutch.value * operatorData.roundsPlayed)
-                            
-                            parsed.unranked.attackers!.set(operatorData.statsDetail, {
-                                aces: aces,
-                                clutches: clutches,
-                                deaths: operatorData.death,
-                                kdRatio: Ratio(operatorData.kills, operatorData.death),
-                                kills: operatorData.kills,
-                                losses: operatorData.roundsLost,
-                                minutesPlayed: operatorData.minutesPlayed,
-                                operator: operatorData.statsDetail,
-                                winPercent: Percent(operatorData.roundsWon, operatorData.roundsLost),
-                                wins: operatorData.roundsWon
-                            })
-                        })
-
-                        defenders?.forEach((operatorData) => {
-                            const aces = Math.round(operatorData.roundsWithAnAce.value * operatorData.roundsPlayed)
-                            const clutches = Math.round(operatorData.roundsWithClutch.value * operatorData.roundsPlayed)
-                            
-                            parsed.unranked.defenders!.set(operatorData.statsDetail, {
-                                aces: aces,
-                                clutches: clutches,
-                                deaths: operatorData.death,
-                                kdRatio: Ratio(operatorData.kills, operatorData.death),
-                                kills: operatorData.kills,
-                                losses: operatorData.roundsLost,
-                                minutesPlayed: operatorData.minutesPlayed,
-                                operator: operatorData.statsDetail,
-                                winPercent: Percent(operatorData.roundsWon, operatorData.roundsLost),
-                                wins: operatorData.roundsWon
-                            })
-                        })
-                    }
-                }
-            }
-        })
-
-        return parsed
+        }
+        else { return }
     }
     catch (error) { console.log(error) }    
 }
