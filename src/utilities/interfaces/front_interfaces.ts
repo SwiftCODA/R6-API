@@ -8,7 +8,7 @@ export interface R6FullProfile {
 }
 
 interface R6Profile {
-    currentSeason: R6Season,
+    currentSeason: R6Season | null,
     level: number,
     lifetime: R6Lifetime | null,
     modified: number,

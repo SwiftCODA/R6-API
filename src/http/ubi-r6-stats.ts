@@ -8,6 +8,7 @@ import { R6LevelResponse, R6OperatorsPlatform, R6OperatorsResponse, R6SeasonResp
 import { AllSeasonCodes, CreateParameterString, GetNextRankRankPoints, NextRankFromRank, Percent, PlatformFamily, PreviousRankFromRank, RankFromInt, RankPointProgress, Ratio } from "../utilities/r6-utilities";
 import { DEFAULT_MAX_VERSION } from "tls";
 import { secondsSinceEpoch } from "../utilities/timestamps";
+import { UbiAccountIds, UbiDataByUserId } from "../utilities/interfaces/simple";
 
 
 
@@ -19,25 +20,26 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
     if (!tokenV2 || !tokenV3) { return internalError }
 
     let fullProfiles: R6FullProfile
+    let accountIdsByPlatform: Map<R6Platform, UbiAccountIds[]> = new Map()
     
     let userDataPromise: Promise<R6User[] | void>
     let levelPromises: Promise<R6Level | void>[] = []
     let operatorsPromises: Promise<R6Operators | void>[] = []
     let lifetimePromises: Promise<R6Lifetime>[] // TODO
-    let currentSeasonPromises: Promise<R6Season | void>[] = []
+    let currentSeasonPromises: Promise<Map<string, R6Season> | void>[] = []
 
     let userData: R6User[] | void
     let levelData: (R6Level | void)[]
     let operatorsData: (R6Operators | void)[]
     let lifetimeData: R6Lifetime
-    let currentSeasonData: (R6Season | void)[]
+    let currentSeasonData 
 
     let levelDataMap: Map<string, number> = new Map()
     let operatorsDataMap: Map<string, R6Operators> = new Map()
     let currentSeasonDataMap: Map<string, R6Season> = new Map()
 
 
-
+    // Request user data.
     switch (platform) {
         case R6Platform.id:
             const ids = usernames
@@ -50,30 +52,70 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
     
 
 
+    // Fetch user data.
     userData = await userDataPromise
     
+    // Create requests that are limited to 1 userId per.
     if (!userData) { return internalError }
     else {
         userData.forEach(user => {
+            // Textual platform converted to R6Platform.
             let newPlatform: R6Platform
 
+            // Convert textual platform to R6Platform.
             switch (user.platform) {
-                case 'uplay': newPlatform = R6Platform.pc; break
-                case 'psn': newPlatform = R6Platform.psn; break
-                case 'xbl': newPlatform = R6Platform.xbox; break
-                default: return internalError
+                case 'uplay':   newPlatform = R6Platform.pc;    break
+                case 'psn':     newPlatform = R6Platform.psn;   break
+                case 'xbl':     newPlatform = R6Platform.xbox;  break
+                default:        return internalError
             }
+            
+            // Push this user's userId to the list of all userIds in question.
+            
+            let userIdsForThisPlatform = accountIdsByPlatform.get(newPlatform)
+
+            // If no userIds have been saved under this platform yet...
+            if (!userIdsForThisPlatform) {
+                // Create new array under this platform.
+                accountIdsByPlatform.set(newPlatform, [{
+                    userId: user.userId,
+                    profileId: user.profileId
+                }])
+            }
+            else {
+                // Push userId to list of userIds under this platform.
+                userIdsForThisPlatform.push({
+                    userId: user.userId,
+                    profileId: user.profileId
+                })
+
+                accountIdsByPlatform.set(newPlatform, userIdsForThisPlatform)
+            }   
 
             levelPromises.push(RequestR6Level(user.userId, user.profileId, tokenV3))
             operatorsPromises.push(RequestR6Operators(user.userId, user.profileId, newPlatform, tokenV2))
-            currentSeasonPromises.push(RequestR6Season(user.userId, user.profileId, newPlatform, tokenV3))
         })
     }
-    
 
+    // Requests that can be made in batches of multiple userIds:
+    accountIdsByPlatform.forEach((accountIds, platform) => {
+        let userDataByUserId: Map<string,UbiDataByUserId> = new Map()
+
+        accountIds.forEach(ubiAccountIds => {
+            userDataByUserId.set(ubiAccountIds.userId, {
+                platform: platform,
+                profileId: ubiAccountIds.profileId
+            })
+        })
+
+        currentSeasonPromises.push(RequestR6Season(userDataByUserId, tokenV3))
+    })
     
+    // Fetch all level data, 1 request for each user.
     levelData = await Promise.all(levelPromises)
+    // Fetch all operator data, 1 request for each user.
     operatorsData = await Promise.all(operatorsPromises)
+    // Fetch all current season data, 1 request for each platform.
     currentSeasonData = await Promise.all(currentSeasonPromises)
 
 
@@ -87,6 +129,9 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
         if (level) {
             levelDataMap.set(level.profileId, level.level)
         }
+        else {
+            // No level data.
+        }
     })
 
     operatorsData.forEach(operators => {
@@ -98,14 +143,16 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
                 unranked: operators.unranked
             })
         }
+        else {
+            // No operator data.
+        }
     })
 
-    currentSeasonData.forEach(currentSeason => {
-        if (currentSeason) {
-            currentSeasonDataMap.set(currentSeason.profileId!, {
-                casual: currentSeason.casual,
-                ranked: currentSeason.ranked
-            })
+    currentSeasonData.forEach(currentSeasonDataByPlatform => {
+        if (currentSeasonDataByPlatform) {
+            // Merge this platform's current season data into the complete set of current
+            // season data for all platforms, keyed by unique profileIds.
+            currentSeasonDataMap = new Map([...currentSeasonDataMap, ...currentSeasonDataByPlatform])
         }
     })
 
@@ -113,7 +160,7 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
         const profileId = user.profileId
 
         fullProfiles.profiles?.set(profileId, {
-            currentSeason: currentSeasonDataMap.get(profileId)!,
+            currentSeason: currentSeasonDataMap.get(profileId) || null,
             level: levelDataMap.get(profileId) || 0,
             lifetime: ,
             modified: secondsSinceEpoch(),
@@ -444,21 +491,11 @@ async function RequestR6Operators(userId: string, profileId: string, platform: R
     catch (error) { console.log(error) }    
 }
 
-// limit 1 player
-async function RequestR6Season(userId: string, profileId: string, platform: R6Platform, token: UbiToken): Promise<R6Season | void> {
-    const desiredPlatformFamily = PlatformFamily(platform)
-    let newPlatform: string
-
-    switch (platform) {
-        case R6Platform.pc: newPlatform = 'PC'; break
-        case R6Platform.psn: newPlatform = 'PLAYSTATION'; break
-        case R6Platform.xbox: newPlatform = 'XONE'; break
-        default: return
-    }
-    
+// limit 50 player
+async function RequestR6Season(userDataByUserId: Map<string, UbiDataByUserId>, token: UbiToken): Promise<Map<string, R6Season> | void> {
     const parameters = {
         platform_families: 'pc,console',
-        profile_ids: userId
+        profile_ids: Array.from(userDataByUserId.keys()).join(',')
     }
     
     const httpConfig = {
@@ -477,62 +514,82 @@ async function RequestR6Season(userId: string, profileId: string, platform: R6Pl
         const response = await axios(httpConfig)
         const data = response.data as R6SeasonResponse
 
-        let parsed: R6Season
-        let ranked: R6SeasonRankedStats | undefined
-        let casual: R6SeasonCasualStats | undefined
+        let parsed: Map<string, R6Season> = new Map()
 
-        if (data.platform_families_full_profiles) {
-            for (const platformFamilyData of data.platform_families_full_profiles) {
-                // 'pc' || 'console', used to compare with desired platform
-                const platformFamily = platformFamilyData.platform_family
-                
-                if (platformFamilyData.board_ids_full_profiles) {
-                    for (const board of platformFamilyData.board_ids_full_profiles) {
-                        // 'casual' || 'event' || 'warmup' || 'ranked'
-                        const gameMode = board.board_id
+        // Try to access nested data. Will catch if there is a failure doing so.
+        try {
+            if (!data.platform_families_full_profiles) { throw Error }
+            else {
+                for (const platformFamilyData of data.platform_families_full_profiles) {
+                    // 'pc' || 'console', used to compare with desired platform
+                    const platformFamily = platformFamilyData.platform_family
+                    
+                    if (!platformFamilyData.board_ids_full_profiles) { throw Error } 
+                    else {
+                        for (const board of platformFamilyData.board_ids_full_profiles) {
+                            // 'casual' || 'event' || 'warmup' || 'ranked'
+                            const gameMode = board.board_id
 
-                        if (board.full_profiles) {
-                            for (const profile of board.full_profiles) {
-                                const player = profile.profile
-                                
-                                const currentSeasonData = profile.season_statistics
+                            if (!board.full_profiles) { throw Error }
+                            else {
+                                for (const profile of board.full_profiles) {
+                                    const player = profile.profile
+                                    const userId = player.id
 
-                                if (platformFamily === desiredPlatformFamily) {
-                                    const rank = RankFromInt(player.rank)
-                                    const maxRank = RankFromInt(player.max_rank)
-                                    const rankPoints = player.rank_points
+                                    const simpleUserData = userDataByUserId.get(userId)!
 
-                                    if (gameMode === 'ranked') {
-                                        ranked = {
-                                            abandons: currentSeasonData.match_outcomes.abandons,
-                                            championNumber: player.top_rank_position,
-                                            deaths: currentSeasonData.deaths,
-                                            kdRatio: Ratio(currentSeasonData.kills, currentSeasonData.deaths),
-                                            kills: currentSeasonData.kills,
-                                            losses: currentSeasonData.match_outcomes.losses,
-                                            maxRank: maxRank,
-                                            maxRankPoints: player.max_rank_points,
-                                            nextRank: NextRankFromRank(rank),
-                                            nextRankByMaxRank: NextRankFromRank(maxRank),
-                                            nextRankRankPoints: GetNextRankRankPoints(rankPoints),
-                                            previousRank: PreviousRankFromRank(rank),
-                                            rank: rank,
-                                            rankPointProgress: RankPointProgress(rankPoints),
-                                            rankPoints: player.rank_points,
-                                            winPercent: Percent(currentSeasonData.match_outcomes.wins, currentSeasonData.match_outcomes.losses),
-                                            wins: currentSeasonData.match_outcomes.losses
+                                    const desiredPlatform = simpleUserData.platform
+                                    const desiredPlatformFamily = PlatformFamily(desiredPlatform)
+
+                                    const profileId = simpleUserData.profileId
+
+                                    let ranked: R6SeasonRankedStats | undefined
+                                    let casual: R6SeasonCasualStats | undefined
+                                    
+                                    const currentSeasonData = profile.season_statistics
+
+                                    if (platformFamily === desiredPlatformFamily) {
+                                        const rank = RankFromInt(player.rank)
+                                        const maxRank = RankFromInt(player.max_rank)
+                                        const rankPoints = player.rank_points
+
+                                        if (gameMode === 'ranked') {
+                                            ranked = {
+                                                abandons: currentSeasonData.match_outcomes.abandons,
+                                                championNumber: player.top_rank_position,
+                                                deaths: currentSeasonData.deaths,
+                                                kdRatio: Ratio(currentSeasonData.kills, currentSeasonData.deaths),
+                                                kills: currentSeasonData.kills,
+                                                losses: currentSeasonData.match_outcomes.losses,
+                                                maxRank: maxRank,
+                                                maxRankPoints: player.max_rank_points,
+                                                nextRank: NextRankFromRank(rank),
+                                                nextRankByMaxRank: NextRankFromRank(maxRank),
+                                                nextRankRankPoints: GetNextRankRankPoints(rankPoints),
+                                                previousRank: PreviousRankFromRank(rank),
+                                                rank: rank,
+                                                rankPointProgress: RankPointProgress(rankPoints),
+                                                rankPoints: player.rank_points,
+                                                winPercent: Percent(currentSeasonData.match_outcomes.wins, currentSeasonData.match_outcomes.losses),
+                                                wins: currentSeasonData.match_outcomes.losses
+                                            }
                                         }
-                                    }
-                                    else if (gameMode === 'casual') {
-                                        casual = {
-                                            abandons: currentSeasonData.match_outcomes.abandons,
-                                            deaths: currentSeasonData.deaths,
-                                            kdRatio: Ratio(currentSeasonData.kills, currentSeasonData.deaths),
-                                            kills: currentSeasonData.kills,
-                                            losses: currentSeasonData.match_outcomes.losses,
-                                            winPercent: Percent(currentSeasonData.match_outcomes.wins, currentSeasonData.match_outcomes.losses),
-                                            wins: currentSeasonData.match_outcomes.losses
+                                        else if (gameMode === 'casual') {
+                                            casual = {
+                                                abandons: currentSeasonData.match_outcomes.abandons,
+                                                deaths: currentSeasonData.deaths,
+                                                kdRatio: Ratio(currentSeasonData.kills, currentSeasonData.deaths),
+                                                kills: currentSeasonData.kills,
+                                                losses: currentSeasonData.match_outcomes.losses,
+                                                winPercent: Percent(currentSeasonData.match_outcomes.wins, currentSeasonData.match_outcomes.losses),
+                                                wins: currentSeasonData.match_outcomes.losses
+                                            }
                                         }
+
+                                        parsed.set(profileId, {
+                                            casual: casual!,
+                                            ranked: ranked!
+                                        })
                                     }
                                 }
                             }
@@ -541,15 +598,11 @@ async function RequestR6Season(userId: string, profileId: string, platform: R6Pl
                 }
             }
         }
-
-        if (casual && ranked) {
-            return {
-                casual: casual,
-                ranked: ranked,
-                profileId: profileId
-            }
+        catch {
+            // The entire response is bad maybe?
         }
-        else { return }
+
+        return parsed
     }
     catch (error) { console.log(error) }    
 }
