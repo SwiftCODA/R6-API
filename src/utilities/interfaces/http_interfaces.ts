@@ -5,6 +5,10 @@ export interface UbiToken {
 }
 
 export interface R6UserResponse {
+    profiles: R6UserData[]
+}
+
+interface R6UserData {
     nameOnPlatform: string
     profileId: string
     userId: string
@@ -16,10 +20,10 @@ export interface R6LevelResponse {
 }
 
 export interface R6OperatorsResponse {
-    profileData: Map<string, R6OperatorsProfileData>
+    profileData: { [key: string]: R6OperatorsProfileData }
 }
 
-interface R6OperatorsProfileData {
+export interface R6OperatorsProfileData {
     platforms?: R6OperatorsPlatforms
 }
 
@@ -51,20 +55,69 @@ interface R6OperatorsTeamRoles {
     defender?: R6OperatorsTeamRole[]
 }
 
-interface R6OperatorsTeamRole {
+export interface R6OperatorsTeamRole {
     statsDetail: string
     death: number
     kills: number
     minutesPlayed: number
     roundsLost: number
     roundsPlayed: number
-    roundsWithAnAce: R6OperatorFloat
-    roundsWithClutch: R6OperatorFloat
+    roundsWithAnAce: R6Float
+    roundsWithClutch: R6Float
     roundsWon: number
 }
 
-interface R6OperatorFloat {
+interface R6Float {
     value: number
+}
+
+export interface R6LifetimeResponse {
+    profileData: { [key: string]: R6LifetimeProfileData }
+}
+
+export interface R6LifetimeProfileData {
+    platforms?: R6LifetimePlatforms
+}
+
+interface R6LifetimePlatforms {
+    PC?: R6LifetimePlatform
+    PS4?: R6LifetimePlatform
+    XONE?: R6LifetimePlatform
+}
+
+export interface R6LifetimePlatform {
+    gameModes?: R6LifetimeGamemodes
+}
+
+interface R6LifetimeGamemodes {
+    all?: R6LifetimeGamemode
+    casual?: R6LifetimeGamemode
+    ranked?: R6LifetimeGamemode
+    unranked?: R6LifetimeGamemode
+}
+
+export interface R6LifetimeGamemode {
+    teamRoles?: R6LifetimeTeamRoles
+}
+
+interface R6LifetimeTeamRoles {
+    all?: R6LifetimeTeamRole[]
+}
+
+interface R6LifetimeTeamRole {
+    assists: number
+    death: number
+    headshots: number
+    kills: number
+    matchesLost: number
+    matchesWon: number
+    minutesPlayed: number
+    roundsPlayed: number
+    roundsWithAnAce: R6Float
+    roundsWithClutch: R6Float
+    revives: number
+    teamKills: number
+    trades: number
 }
 
 export interface R6SeasonResponse {

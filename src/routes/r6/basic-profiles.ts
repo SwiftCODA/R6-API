@@ -6,7 +6,6 @@ const { R6UsernameIsValid, GUIDIsValid } = require('../../utilities/validity')
 
 
 
-
 /**
  * Handles HTTP requests made to
  *   /r6/basic-profiles/{PLATFORM}/{USERNAME}?region={REGION} and
@@ -16,7 +15,7 @@ const { R6UsernameIsValid, GUIDIsValid } = require('../../utilities/validity')
  * 
  * @param {Request} req Express request object.
  * @param {Response} res Express response object with callback properties. 
- */
+ 
 function r6_basic_profiles(req, res) {
     // Can be `id`, `pc`, `psn`, `xbox`.
     const platform = req.params.platform.toLowerCase()
@@ -104,4 +103,4 @@ function r6_basic_profiles(req, res) {
 
 module.exports = {
     r6_basic_profiles
-}
+}*/

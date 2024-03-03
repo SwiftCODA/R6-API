@@ -1,9 +1,9 @@
 import { R6Rank, R6RawPlatform } from './enums'
 
 export interface R6FullProfile {
-    code: number,
-    profiles?: Map<string, R6Profile>
-    error?: string,
+    code: number
+    profiles?: { [key: string]: R6Profile }
+    error?: string
     message?: string
 }
 
@@ -22,9 +22,10 @@ export interface R6Lifetime {
     overall: R6LifetimeStats,
     ranked: R6LifetimeStats,
     unranked: R6LifetimeStats
+    profileId?: string
 }
 
-interface R6LifetimeStats {
+export interface R6LifetimeStats {
     aces: number,
     assists: number,
     clutches: number,
@@ -85,12 +86,12 @@ export interface R6Operators {
     profileId?: string
 }
 
-interface R6OperatorsGamemode {
-    attackers: Map<string, R6OperatorStats> | null,
-    defenders: Map<string, R6OperatorStats> | null
+export interface R6OperatorsGamemode {
+    attackers: { [key: string]: R6OperatorStats } | null
+    defenders: { [key: string]: R6OperatorStats } | null
 }
 
-interface R6OperatorStats {
+export interface R6OperatorStats {
     aces: number,
     clutches: number,
     deaths: number,

@@ -52,6 +52,45 @@ async function RequestLogin(appId: UbiAppId): Promise<R6UserResponse | void> {
     }
 }
 
+export class UbiLoginManager {
+    static instance: UbiLoginManager
+
+    loggingIn: boolean = false
+
+    /**
+     * Logs into a Ubisoft acount twice, once with a V2 appId and once with a
+     * V3 appId. Saves both auth tokens to the `private/auth_token_{VERSION}` files.
+     * 
+     * Avoid calling this function more than 3 times per hour.
+     * 
+     * @returns Whether the login was aborted.
+     */
+    async Login(): Promise<boolean> {
+        if (!this.loggingIn) {
+            this.loggingIn = true
+
+            try {
+                const tokenV2 = await RequestLogin(UbiAppId.v2)
+                await SaveJSONToFile('private/auth_token_v2.json', tokenV2 as R6UserResponse)
+        
+                const tokenV3 = await RequestLogin(UbiAppId.v3)
+                await SaveJSONToFile('private/auth_token_v3.json', tokenV3 as R6UserResponse)
+
+                this.loggingIn = false
+                return false
+            }
+            catch (error) {
+                console.log(error)
+
+                this.loggingIn = false
+                return false
+            }
+        }
+        else {
+            return true
+        }
+    }
+}
 /**
  * Logs into a Ubisoft acount twice, once with a V2 appId and once with a
  * V3 appId. Saves both auth tokens to the `private/auth_token_{VERSION}` files.

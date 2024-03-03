@@ -15,7 +15,7 @@ import { Request, Response } from 'express'
  * @param req Express request object.
  * @param res Express response object with callback properties. 
  */
-function r6_profiles(req: Request, res: Response) {
+export function r6_profiles(req: Request, res: Response) {
     // Can be `id`, `pc`, `psn`, `xbox`.
     const platform = req.params.platform.toLowerCase() as R6Platform
 
@@ -50,10 +50,7 @@ function r6_profiles(req: Request, res: Response) {
     if (isValid) {
         if (region !== undefined) {
             RequestFullProfile(username, platform, region).then(profileData => {
-                res.status(200).send({
-                    code: 200,
-                    profiles: profileData
-                })
+                res.status(200).send(profileData)
             }).catch(error => {
                 res.status(500).send({
                     code: 500,
@@ -95,11 +92,4 @@ function r6_profiles(req: Request, res: Response) {
             message: errorMessage
         })
     }
-}
-
-
-
-
-module.exports = {
-    r6_profiles
 }

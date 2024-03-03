@@ -5,11 +5,11 @@ import router from './router'
 import cluster from 'cluster'
 import os from 'os'
 import config from './configs/config.json'
-import { R6Platform } from './utilities/interfaces/enums'
+import { tooManyRequestsError } from './utilities/errors'
+import { UbiLoginManager } from './http/ubi-auth'
+import Token from './utilities/ubi-token'
 
-let x = 'id'
-let y = x as R6Platform
-console.log(y)
+
 
 // Toggle debug mode.
 if (!config.debug_mode) {
@@ -20,6 +20,8 @@ if (!config.debug_mode) {
     console.warn = () => {}
 }
 
+// Create class singletons.
+UbiLoginManager.instance = new UbiLoginManager
 
 // Maximum of X requests per user per second.
 const limiter = rateLimit({
@@ -27,11 +29,7 @@ const limiter = rateLimit({
     windowMs: 1000,
     standardHeaders: false,
     legacyHeaders: false, 
-    message: {
-        code: 429,
-        error: 'Too many requests',
-        message: 'Too many requests. Slow down.'
-    }
+    message: tooManyRequestsError
 })
 
 // If this cluster is the primary cluster, create a worker on all other CPUs.
@@ -49,9 +47,14 @@ if (cluster.isPrimary) {
     cluster.on('exit', (worker, code, signal) => {
         cluster.fork()
     })
+
+    // Perform initialization tasks exactly once.
+    UbiLoginManager.instance.Login()
 }
 // If this cluster is not a primary cluster, create a worker on this CPU.
 else {
+    console.log('Cluster: Created worker.')
+    
     // Create Express instance on this CPU.
     const app = express()
 
