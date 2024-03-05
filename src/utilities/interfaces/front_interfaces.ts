@@ -1,5 +1,7 @@
 import { R6Rank, R6RawPlatform } from './enums'
 
+
+
 export interface R6FullProfile {
     code: number
     profiles?: { [key: string]: R6Profile }

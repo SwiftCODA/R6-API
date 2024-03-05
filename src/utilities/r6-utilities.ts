@@ -1,5 +1,7 @@
 import config from '../configs/config.json'
-import { R6Platform, R6Rank } from './interfaces/enums';
+import { R6Platform, R6Rank } from './interfaces/enums'
+
+
 
 /**
  * Creates a string following the URL-parameter format from a parameter object.
@@ -24,13 +26,13 @@ export function CreateParameterString(parameters: object) {
  */
 export function AllSeasonCodes(): string {
     // The current season code defined by the config file.
-    const current = config.current_season;
+    const current = config.current_season
 
     // The list of season codes.
-    let codes = [];
+    let codes = []
 
-    let year = 1;
-    let season = 1;
+    let year = 1
+    let season = 1
 
     while (codes[codes.length - 1] !== current) {
         codes.push(`Y${year}S${season}`)
@@ -39,7 +41,7 @@ export function AllSeasonCodes(): string {
         else { season = 1; year++ }
     }
 
-    return codes.join(',');
+    return codes.join(',')
 }
 
 /**
@@ -53,14 +55,14 @@ export function Ratio(a: number, b: number): string {
     if (a != 0) {
         if (b != 0) {
             const n = Number(a / b).toFixed(2)
-            return n != "NaN" ? n : "0.00"
+            return n != 'NaN' ? n : '0.00'
         }
         else {
             const n = Number(a).toFixed(2)
-            return n != "NaN" ? n : "0.00"
+            return n != 'NaN' ? n : '0.00'
         }
     }
-    else { return "0.00" }
+    else { return '0.00' }
 }
 
 /**
@@ -74,11 +76,11 @@ export function Percent(a: number, b: number): string {
     if (a != 0) {
         if (b != 0) {
             const n = Number(a / (a + b) * 100).toFixed(2)
-            return n != "NaN" ? n + "%" : "0.00%"
+            return n != 'NaN' ? n + '%' : '0.00%'
         }
-        else { return "100.00%" }
+        else { return '100.00%' }
     }
-    else { return "0.00%" }
+    else { return '0.00%' }
 }
 
 /**

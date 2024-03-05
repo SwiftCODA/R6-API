@@ -1,4 +1,6 @@
-import { R6FullProfile } from "./interfaces/front_interfaces";
+import { R6FullProfile } from './interfaces/front_interfaces'
+
+
 
 export const internalError: R6FullProfile = {
     code: 500,

@@ -1,4 +1,6 @@
-import { R6Platform } from './interfaces/enums';
+import { R6Platform } from './interfaces/enums'
+
+
 
 /**
  * Determines whether an R6 username is valid depending on the specified platform.

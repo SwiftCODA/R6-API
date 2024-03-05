@@ -27,7 +27,7 @@ async function RequestLogin(appId: UbiAppId): Promise<R6UserResponse | void> {
             'Content-Type': 'application/json'
         },
         data: JSON.stringify({
-            "rememberMe": true
+            rememberMe: true
         })
     }
 

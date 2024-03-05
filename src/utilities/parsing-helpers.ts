@@ -1,6 +1,8 @@
-import { R6LifetimeStats, R6OperatorStats, R6OperatorsGamemode } from './interfaces/front_interfaces';
-import { R6LifetimeGamemode, R6OperatorsTeamRole } from './interfaces/http_interfaces';
-import { Percent, Ratio } from './r6-utilities';
+import { R6LifetimeStats, R6OperatorStats, R6OperatorsGamemode } from './interfaces/front_interfaces'
+import { R6LifetimeGamemode, R6OperatorsTeamRole } from './interfaces/http_interfaces'
+import { Percent, Ratio } from './r6-utilities'
+
+
 
 export const DefaultR6LifetimesStats: R6LifetimeStats = {
     aces: 0,

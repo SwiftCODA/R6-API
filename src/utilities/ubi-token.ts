@@ -1,6 +1,6 @@
-import { UbiToken } from './interfaces/http_interfaces';
+import { UbiToken } from './interfaces/http_interfaces'
 import { readFile } from 'fs/promises'
-const x = require('../../private/auth_token_v2.json')
+
 
 
 export default async function Token(version: string): Promise<UbiToken | void> {

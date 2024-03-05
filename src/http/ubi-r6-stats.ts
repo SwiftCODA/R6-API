@@ -1,14 +1,14 @@
-import { R6Platform, R6RawPlatform, R6Region, UbiAppId } from "../utilities/interfaces/enums";
-import { internalError } from "../utilities/errors";
-import { R6FullProfile, R6Lifetime, R6Season, R6Operators, R6User, R6Level, R6SeasonRankedStats, R6SeasonCasualStats } from "../utilities/interfaces/front_interfaces";
-import Token from "../utilities/ubi-token";
+import { R6Platform, R6RawPlatform, R6Region, UbiAppId } from '../utilities/interfaces/enums'
+import { internalError } from '../utilities/errors'
+import { R6FullProfile, R6Lifetime, R6Season, R6Operators, R6User, R6Level, R6SeasonRankedStats, R6SeasonCasualStats } from '../utilities/interfaces/front_interfaces'
+import Token from '../utilities/ubi-token'
 import config from '../configs/config.json'
-import axios from "axios";
-import { R6LevelResponse, R6LifetimePlatform, R6LifetimeProfileData, R6LifetimeResponse, R6OperatorsPlatform, R6OperatorsProfileData, R6OperatorsResponse, R6SeasonResponse, R6UserResponse, UbiToken } from "../utilities/interfaces/http_interfaces";
-import { AllSeasonCodes, CreateParameterString, GetNextRankRankPoints, NextRankFromRank, Percent, PlatformFamily, PreviousRankFromRank, RankFromInt, RankPointProgress, Ratio } from "../utilities/r6-utilities";
-import { secondsSinceEpoch } from "../utilities/timestamps";
-import { UbiAccountIds, UbiDataByUserId } from "../utilities/interfaces/simple";
-import { DefaultR6LifetimesStats, DefaultR6OperatorsGamemode, MergeR6LifetimeStats, SimplifiedR6OperatorStats } from "../utilities/parsing-helpers";
+import axios from 'axios'
+import { R6LevelResponse, R6LifetimePlatform, R6LifetimeProfileData, R6LifetimeResponse, R6OperatorsPlatform, R6OperatorsProfileData, R6OperatorsResponse, R6SeasonResponse, R6UserResponse, UbiToken } from '../utilities/interfaces/http_interfaces'
+import { AllSeasonCodes, CreateParameterString, GetNextRankRankPoints, NextRankFromRank, Percent, PlatformFamily, PreviousRankFromRank, RankFromInt, RankPointProgress, Ratio } from '../utilities/r6-utilities'
+import { secondsSinceEpoch } from '../utilities/timestamps'
+import { UbiAccountIds, UbiDataByUserId } from '../utilities/interfaces/simple'
+import { DefaultR6LifetimesStats, DefaultR6OperatorsGamemode, MergeR6LifetimeStats, SimplifiedR6OperatorStats } from '../utilities/parsing-helpers'
 
 
 

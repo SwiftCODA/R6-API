@@ -1,4 +1,6 @@
-import { R6Platform } from "./enums"
+import { R6Platform } from './enums'
+
+
 
 export interface UbiAccountIds {
     userId: string,

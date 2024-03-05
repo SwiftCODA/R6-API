@@ -7,7 +7,6 @@ import os from 'os'
 import config from './configs/config.json'
 import { tooManyRequestsError } from './utilities/errors'
 import { UbiLoginManager } from './http/ubi-auth'
-import Token from './utilities/ubi-token'
 
 
 
