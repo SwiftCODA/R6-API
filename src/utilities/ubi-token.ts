@@ -11,6 +11,6 @@ export default async function Token(version: string): Promise<UbiToken | void> {
         return token
     }
     catch (error) {
-        console.log(error)
+        console.error(error)
     }
 }

@@ -136,10 +136,6 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
     // Fetch all current season data, 1 request for each platform.
     currentSeasonData = await Promise.all(currentSeasonPromises)
 
-    console.log(operatorsData)
-    console.log(lifetimeData)
-    console.log(levelData)
-    console.log(currentSeasonData)
 
 
     fullProfiles = { code: 200 }
@@ -156,8 +152,6 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
         }
     })
 
-    console.log(levelDataMap)
-
     operatorsData.forEach(operators => {
         if (operators) {
             operatorsDataMap.set(operators.profileId!, {
@@ -172,8 +166,6 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
         }
     })
 
-    console.log(operatorsDataMap)
-
     lifetimeData.forEach(lifetime => {
         if (lifetime) {
             lifetimeDataMap.set(lifetime.profileId!, {
@@ -185,8 +177,6 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
         }
     })
 
-    console.log(lifetimeDataMap)
-
     currentSeasonData.forEach(currentSeasonDataByPlatform => {
         if (currentSeasonDataByPlatform) {
             // Merge this platform's current season data into the complete set of current
@@ -197,8 +187,6 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
             // No current season data.
         }
     })
-
-    console.log(currentSeasonDataMap)
 
     userData.forEach(user => {
         const profileId = user.profileId
@@ -257,7 +245,7 @@ async function RequestR6User(params: string, token: UbiToken): Promise<R6User[] 
 
         return parsed
     }
-    catch (error) { console.log(error) }
+    catch (error) { console.error(error) }
 }
 
 // limit 1 player
@@ -285,7 +273,7 @@ async function RequestR6Level(userId: string, profileId: string, token: UbiToken
 
         return parsed
     }
-    catch (error) { console.log(error) }
+    catch (error) { console.error(error) }
 }
 
 // limit 1 player
@@ -422,7 +410,7 @@ async function RequestR6Operators(userId: string, profileId: string, platform: R
 
         return parsed
     }
-    catch (error) { console.log(error) }    
+    catch (error) { console.error(error) }    
 }
 
 // limit 1 plauer
@@ -498,7 +486,7 @@ async function RequestR6Lifetime(userId: string, profileId: string, platform: R6
 
         return parsed
     }
-    catch (error) { console.log(error) }    
+    catch (error) { console.error(error) }    
 }
 
 // limit 50 player
@@ -614,5 +602,5 @@ async function RequestR6Season(userDataByUserId: Map<string, UbiDataByUserId>, t
 
         return parsed
     }
-    catch (error) { console.log(error) }    
+    catch (error) { console.error(error) }    
 }
