@@ -7,6 +7,7 @@ import os from 'os'
 import config from './configs/config.json'
 import { tooManyRequestsError } from './utilities/errors'
 import { UbiLoginManager } from './http/ubi-auth'
+import ScheduleLogin from './utilities/cron'
 
 
 
@@ -49,6 +50,9 @@ if (cluster.isPrimary) {
 
     // Perform initialization tasks exactly once.
     UbiLoginManager.instance.Login()
+
+    // Schedule cron tasks.
+    ScheduleLogin()
 }
 // If this cluster is not a primary cluster, create a worker on this CPU.
 else {
