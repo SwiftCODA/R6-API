@@ -4,7 +4,7 @@ import { mkdir, writeFile } from 'fs/promises'
 
 
 export async function SaveJSONToFile(path: string, json: object) {
-    // Separate path and fileName.
+    // Separate path and filename.
     let pathComponents = path.split('/')
 
     // Declare filename. 

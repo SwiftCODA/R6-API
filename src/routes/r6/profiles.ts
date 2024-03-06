@@ -6,9 +6,9 @@ import { Request, Response } from 'express'
 
 
 /**
- * Handles HTTP requests made to
- *   /r6/profiles/{PLATFORM}/{USERNAME}?region={REGION} and
- *   /r6/profiles/id/{PROFILEID}?region={REGION} paths.
+ * Handles HTTP requests made to the following paths:
+ *   /r6/profiles/{PLATFORM}/{USERNAME}
+ *   /r6/profiles/id/{PROFILEID}
  * Makes necessary function calls to obtain all stats for the specified profiles.
  * Limit of 50 profiles.
  * 
@@ -19,10 +19,8 @@ export function r6_profiles(req: Request, res: Response) {
     // Can be `id`, `pc`, `psn`, `xbox`.
     const platform = req.params.platform.toLowerCase() as R6Platform
 
-    // Can be 1-50 usernames or 1-50 profileIds.
+    // Can be 1-50 usernames or 1-50 profile ids.
     const username = req.params.username
-    // Can be `ncsa`, `emea`, `apac`.
-    const region = req.query.region as R6Region
 
     // Determine if the URL parameters are valid.
     let isValid = true
@@ -48,24 +46,18 @@ export function r6_profiles(req: Request, res: Response) {
     }
 
     if (isValid) {
-        if (region !== undefined) {
-            RequestFullProfile(username, platform, region).then(profileData => {
-                res.status(200).send(profileData)
-            }).catch(error => {
-                res.status(500).send({
-                    code: 500,
-                    error: 'Internal Server Error',
-                    message: 'Something went wrong on our end. Please contact our support team if this error persists.'
-                })
+        // Begin fetching stats from Ubisoft.
+        RequestFullProfile(username, platform).then(profileData => {
+            res.status(200).send(profileData)
+        }).catch(error => {
+            console.error(error)
+
+            res.status(500).send({
+                code: 500,
+                error: 'Internal Server Error',
+                message: 'Something went wrong on our end. Please contact our support team if this error persists.'
             })
-        }
-        else {
-            res.status(400).send({
-                code: 400,
-                error: 'Bad Request',
-                message: 'No region specified.'
-            })
-        }
+        })
     }
     else {
         // To go into 'message' property of the HTTP error object.

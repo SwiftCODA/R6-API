@@ -12,8 +12,15 @@ import { DefaultR6LifetimesStats, DefaultR6OperatorsGamemode, MergeR6LifetimeSta
 
 
 
-// called by route
-export async function RequestFullProfile(usernames: string, platform: R6Platform, region: R6Region): Promise<R6FullProfile> {
+/**
+ * Called by /r6/profiles/:username/:platform route. Fetches locally stored Ubisoft auth tokens,
+ * calls functions that make requests to all Ubisoft stats endpoints, sorts and returns combined data. 
+ * 
+ * @param usernames Username(s) or profile id(s) of R6 accounts, separated by commas.
+ * @param platform Platform of R6 accounts (can be R6Platform.id if using profile ids instead of usernames).
+ * @returns Complete R6FullProfile object.
+ */
+export async function RequestFullProfile(usernames: string, platform: R6Platform): Promise<R6FullProfile> {
     // Fetch the V2 and V3 tokens from local file.
     const tokenV2 = await Token('v2')
     const tokenV3 = await Token('v3')
@@ -48,8 +55,6 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
     let lifetimeDataMap: Map<string, R6Lifetime> = new Map()
     let currentSeasonDataMap: Map<string, R6Season> = new Map()
 
-
-
     // Create request for basic user data like username, profileId, userId, platform.
     switch (platform) {
         case R6Platform.id:
@@ -61,8 +66,6 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
             break
     }
     
-
-
     // Fetch user data.
     userData = await userDataPromise
     
@@ -124,6 +127,7 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
             })
         })
 
+        // Create request for this platform's current season data.
         currentSeasonPromises.push(RequestR6Season(userDataByUserId, tokenV3))
     })
     
@@ -136,22 +140,21 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
     // Fetch all current season data, 1 request for each platform.
     currentSeasonData = await Promise.all(currentSeasonPromises)
 
-
-
+    // Create new, empty R6FullProfile object.
     fullProfiles = { code: 200 }
     fullProfiles.profiles = {}
 
-    
-
+    // Sort level data into a map, keyed by profile ids.
     levelData.forEach(level => {
         if (level) {
             levelDataMap.set(level.profileId, level.level)
         }
         else {
-            // No level data.
+            throw Error('No level data.')
         }
     })
 
+    // Sort operator data into a map, keyed by profile ids.
     operatorsData.forEach(operators => {
         if (operators) {
             operatorsDataMap.set(operators.profileId!, {
@@ -162,10 +165,11 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
             })
         }
         else {
-            // No operator data.
+            throw Error('No operator data.')
         }
     })
 
+    // Sort lifetime data into a map, keyed by profile ids.
     lifetimeData.forEach(lifetime => {
         if (lifetime) {
             lifetimeDataMap.set(lifetime.profileId!, {
@@ -175,8 +179,12 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
                 unranked: lifetime.unranked
             })
         }
+        else {
+            throw Error('No lifetime data.')
+        }
     })
 
+    // Sort current season data into a map, keyed by profile ids.
     currentSeasonData.forEach(currentSeasonDataByPlatform => {
         if (currentSeasonDataByPlatform) {
             // Merge this platform's current season data into the complete set of current
@@ -184,10 +192,11 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
             currentSeasonDataMap = new Map([...currentSeasonDataMap, ...currentSeasonDataByPlatform])
         }
         else {
-            // No current season data.
+            throw Error('No current season data.')
         }
     })
 
+    // Combine all separate data into the single R6FullProfile object.
     userData.forEach(user => {
         const profileId = user.profileId
 
@@ -205,17 +214,46 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
     return fullProfiles
 }
 
+/**
+ * Creates HTTP parameters for requesting core user data by username/platform, then
+ * offloads work to RequestR6User().
+ * Limit: 50 players.
+ * Token Version: V2
+ * 
+ * @param usernames Username(s) of R6 accounts, separated by commas.
+ * @param platform Platform of R6 accounts.
+ * @param token V2 Ubisoft auth token.
+ * @returns Array of R6Users.
+ */
 async function RequestR6UserByUsername(usernames: string, platform: R6Platform, token: UbiToken): Promise<R6User[] | void> {
     const params = `nameOnPlatform=${usernames}&platformType=${platform}`
     return await RequestR6User(params, token)
 }
 
+/**
+ * Creates HTTP parameters for requesting core user data by profile id, then
+ * offloads work to `RequestR6User()`.
+ * Limit: 50 players.
+ * Token Version: V2
+ * 
+ * @param usernames Profile id(s) of R6 accounts, separated by commas.
+ * @param token V2 Ubisoft auth token.
+ * @returns Array of R6Users.
+ */
 async function RequestR6UserById(profileId: string, token: UbiToken): Promise<R6User[] | void> {
     const params = `profileId=${profileId}`
     return await RequestR6User(params, token)
 }
 
-// Only to be called by RequestR6UserByUsername || RequestR6UserById
+/**
+ * Requests core user data from Ubiosft and returns a parsed version of it.
+ * Limit: 50 players.
+ * Token Version: V2
+ * 
+ * @param params HTTP parameters generated by `RequestR6UserByUsername()` or `RequestR6UserById`.
+ * @param token V2 Ubisoft auth token.
+ * @returns Array of R6Users.
+ */
 async function RequestR6User(params: string, token: UbiToken): Promise<R6User[] | void> {
     const httpConfig = {
         method: 'GET',
@@ -248,7 +286,16 @@ async function RequestR6User(params: string, token: UbiToken): Promise<R6User[] 
     catch (error) { console.error(error) }
 }
 
-// limit 1 player
+/**
+ * Requests level data from Ubisoft and returns a parsed version of it.
+ * Limit: 1 player.
+ * Token Version: V3
+ * 
+ * @param userId User id of R6 account (NOT to be confused with profile id).
+ * @param profileId Profile id of R6 account.
+ * @param token V3 Ubisoft auth token.
+ * @returns R6Level object.
+ */
 async function RequestR6Level(userId: string, profileId: string, token: UbiToken): Promise<R6Level | void> {
     const httpConfig = {
         method: 'GET',
@@ -276,7 +323,17 @@ async function RequestR6Level(userId: string, profileId: string, token: UbiToken
     catch (error) { console.error(error) }
 }
 
-// limit 1 player
+/**
+ * Requests operator data from Ubisoft and returns a parsed version of it.
+ * Limit: 1 player.
+ * Token Version: V2
+ * 
+ * @param userId User id of R6 account (NOT to be confused with profile id).
+ * @param profileId Profile id of R6 account.
+ * @param platform Platform of R6 account.
+ * @param token V2 Ubisoft auth token.
+ * @returns R6Operators object.
+ */
 async function RequestR6Operators(userId: string, profileId: string, platform: R6Platform, token: UbiToken): Promise<R6Operators | void> {
     let newPlatform: string
 
@@ -413,7 +470,17 @@ async function RequestR6Operators(userId: string, profileId: string, platform: R
     catch (error) { console.error(error) }    
 }
 
-// limit 1 plauer
+/**
+ * Requests lifetime data by gamemode from Ubisoft and returns a parsed version of it.
+ * Limit: 1 player.
+ * Token Version: V2
+ * 
+ * @param userId User id of R6 account (NOT to be confused with profile id).
+ * @param profileId Profile id of R6 account.
+ * @param platform Platform of R6 account.
+ * @param token V2 Ubisoft auth token.
+ * @returns R6Lifetime object.
+ */
 async function RequestR6Lifetime(userId: string, profileId: string, platform: R6Platform, token: UbiToken): Promise<R6Lifetime | void> {
     let newPlatform: string
 
@@ -489,7 +556,15 @@ async function RequestR6Lifetime(userId: string, profileId: string, platform: R6
     catch (error) { console.error(error) }    
 }
 
-// limit 50 player
+/**
+ * Requests current season data from Ubisoft and returns a parsed version of it.
+ * Limit: 50 players.
+ * Token Version: V3
+ * 
+ * @param userDataByUserId Map of UbiDataByUserId objects keyed by R6 user ids.
+ * @param token V3 Ubisoft auth token.
+ * @returns Map of R6Seasons keyed by profile ids.
+ */
 async function RequestR6Season(userDataByUserId: Map<string, UbiDataByUserId>, token: UbiToken): Promise<Map<string, R6Season> | void> {
     const parameters = {
         platform_families: 'pc,console',
@@ -514,21 +589,19 @@ async function RequestR6Season(userDataByUserId: Map<string, UbiDataByUserId>, t
 
         let parsed: Map<string, R6Season> = new Map()
 
-        // Try to access nested data. Will catch if there is a failure doing so.
-        try {
-            if (!data.platform_families_full_profiles) { throw Error }
+        if (!data.platform_families_full_profiles) { return }
             else {
                 for (const platformFamilyData of data.platform_families_full_profiles) {
                     // 'pc' || 'console', used to compare with desired platform
                     const platformFamily = platformFamilyData.platform_family
                     
-                    if (!platformFamilyData.board_ids_full_profiles) { throw Error } 
+                    if (!platformFamilyData.board_ids_full_profiles) { return } 
                     else {
                         for (const board of platformFamilyData.board_ids_full_profiles) {
                             // 'casual' || 'event' || 'warmup' || 'ranked'
                             const gameMode = board.board_id
 
-                            if (!board.full_profiles) { throw Error }
+                            if (!board.full_profiles) { return }
                             else {
                                 for (const profile of board.full_profiles) {
                                     const player = profile.profile
@@ -595,10 +668,6 @@ async function RequestR6Season(userDataByUserId: Map<string, UbiDataByUserId>, t
                     }
                 }
             }
-        }
-        catch {
-            // The entire response is bad maybe?
-        }
 
         return parsed
     }

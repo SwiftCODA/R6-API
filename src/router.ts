@@ -10,13 +10,13 @@ const router = Router()
 
 
 
-// Full Profiles Endpoint
+// Full Profiles Endpoint.
 router.get(
     '/r6/profiles/:platform/:username',
     r6_profiles
 )
 
-// Page Not Found Endpoint
+// Page Not Found Endpoint.
 // (If adding more routes, ensure that this is the LAST one before the error handler.)
 router.use(
     '/', 
