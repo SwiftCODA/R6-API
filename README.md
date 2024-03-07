@@ -34,13 +34,13 @@ You must modify the `config.json` file according to your needs.
 
 ### Start of Every R6 Season
 
-Update the "`current_season`" property (Eg. `"Y9S1"`).
+Update the `"current_season"` property (Eg. `"Y9S1"`).
 
 ### Add Your Ubisoft Credentials
 
 In order to access R6 stats for any player, you must be logged into a Ubisoft account with 2FA disabled. You can even create a "burner" Ubisoft account--it doesn't have to be your personal one.
 
-Add your account's `email` and `password` to the configuration file.
+Add your account's `"email"` and `"password"` to the configuration file.
 
 
 
