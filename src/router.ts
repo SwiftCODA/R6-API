@@ -1,4 +1,4 @@
-import Router from 'express'
+import { Router } from 'express'
 import { r6_profiles } from './routes/r6/profiles'
 import { _404 } from './routes/404'
 import { Middleware } from './middleware/middleware'
