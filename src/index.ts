@@ -65,7 +65,7 @@ else {
     app.use(helmet())
     // Enable rate limiter.
     app.use(limiter)
-    // Enable handling of all requests via the router.js file.
+    // Enable handling of all requests via the router.ts file.
     app.use('/', router)
 
     // Run Express server and listen on port.
