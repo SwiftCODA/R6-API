@@ -1,7 +1,7 @@
 {
   "name": "r6-api",
   "version": "1.0.0",
-  "description": "Fetch player stats for Rainbow Six Siege (Updated 2024 Ranked 2.0).",
+  "description": "Updated Rainbow Six: Siege® API wrapper for user stats.",
   "main": "src/index.ts",
   "scripts": {
     "start": "npx ts-node src/index.ts"
