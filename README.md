@@ -62,6 +62,121 @@ Without a process manager installed, you can run a single instance of this appli
 
 
 
+### Endpoints
+
+GET `/r6/profiles/:platform/:username`
+
+#### Request Parameters
+
+| Parameter   | Description                                               | Valid Values      |
+|-------------|-----------------------------------------------------------|-------------------|
+| `:platform` | The platform on which the player's profile is located.    | `id`, `pc`, `psn`, `xbox` |
+| `:username` | The username or profileId for the player's profile.       | -                 |
+
+<details>
+  <summary> Example Response</summary>
+
+```
+{
+  "code": 200,
+  "profiles": {
+    "54822057-4dba-41e2-98b4-42bbe4a9fc4b": {
+      "currentSeason": {
+        "ranked": {
+          "abandons": 0,
+          "championNumber": 0,
+          "deaths": 325,
+          "kdRatio": "1.04",
+          "kills": 337,
+          "losses": 35,
+          "maxRank": "emerald iv",
+          "maxRankPoints": 3645,
+          "nextRank": "emerald iii",
+          "nextRankByMaxRank": "emerald iii",
+          "nextRankRankPoints": 3700,
+          "previousRank": "emerald v",
+          "rank": "emerald iv",
+          "rankPointProgress": 0,
+          "rankPoints": 3600,
+          "winPercent": "52.70%",
+          "wins": 35
+        }
+      },
+      "level": 254,
+      "lifetime": {
+        "overall": {
+          "aces": 38,
+          "assists": 4651,
+          "clutches": 239,
+          "deaths": 16826,
+          "headshots": 5368,
+          "kdRatio": "0.96",
+          "kills": 16218,
+          "killTrades": 462,
+          "losses": 2488,
+          "minutesPlayed": 85439,
+          "revives": 1031,
+          "teamKills": 457,
+          "winPercent": "52.51%",
+          "wins": 2751
+        },
+        "casual": {},
+        "ranked": {},
+        "unranked": {}
+      },
+      "modified": 1714838665,
+      "operators": {
+        "overall": {
+          "attackers": {
+            "maverick": {
+              "aces": 0,
+              "clutches": 0,
+              "deaths": 1,
+              "kdRatio": "0.00",
+              "kills": 0,
+              "losses": 1,
+              "minutesPlayed": 3,
+              "operator": "maverick",
+              "winPercent": "0.00%",
+              "wins": 0
+            }
+          },
+          "defenders": {
+            "mira": {
+              "aces": 0,
+              "clutches": 0,
+              "deaths": 1,
+              "kdRatio": "0.00",
+              "kills": 0,
+              "losses": 1,
+              "minutesPlayed": 5,
+              "operator": "mira",
+              "winPercent": "50.00%",
+              "wins": 1
+            }
+          }
+        },
+        "casual": {},
+        "ranked": {},
+        "unranked": {}
+      },
+      "platform": "psn",
+      "profileId": "54822057-4dba-41e2-98b4-42bbe4a9fc4b",
+      "userId": "7d688a85-9d59-460e-864c-6c43d54f50d7",
+      "username": "BobbyJoe123"
+    }
+  }
+}
+```
+
+</details>
+
+
+---
+
+
+
+
 ## Contributors
 
 Developer: Jarren Morris ([@SwiftCODA](https://github.com/swiftcoda)), Software Engineering Student
