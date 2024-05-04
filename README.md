@@ -62,13 +62,6 @@ Without a process manager installed, you can run a single instance of this appli
 
 
 
-## Contributors
-
-Developer: Jarren Morris ([@SwiftCODA](https://github.com/swiftcoda)), Software Engineering Student
-
-Developer: Caleb Marquart ([@calebmarquart](https://github.com/calebmarquart)), Computer Software Engineering Student
-
-
 ### Endpoints
 
 GET `/r6/profiles/:platform/:username`
@@ -78,7 +71,7 @@ GET `/r6/profiles/:platform/:username`
 | Parameter   | Description                                               | Valid Values      |
 |-------------|-----------------------------------------------------------|-------------------|
 | `:platform` | The platform on which the player's profile is located.    | `id`, `pc`, `psn`, `xbox` |
-| `:username` | The identifier for the player's profile.                  | -                 |
+| `:username` | The username or profileId for the player's profile.       | -                 |
 
 <details>
   <summary> Example Response</summary>
@@ -165,10 +158,12 @@ GET `/r6/profiles/:platform/:username`
         },
         "casual": {},
         "ranked": {},
-        "unranked": {},
-        "platform": "psn",
-        "profileId": "54822057-4dba-41e2-98b4-42bbe4a9fc4b"
-      }
+        "unranked": {}
+      },
+      "platform": "psn",
+      "profileId": "54822057-4dba-41e2-98b4-42bbe4a9fc4b",
+      "userId": "7d688a85-9d59-460e-864c-6c43d54f50d7",
+      "username": "BobbyJoe123"
     }
   }
 }
@@ -178,6 +173,18 @@ GET `/r6/profiles/:platform/:username`
 
 
 ---
+
+
+
+
+## Contributors
+
+Developer: Jarren Morris ([@SwiftCODA](https://github.com/swiftcoda)), Software Engineering Student
+
+Developer: Caleb Marquart ([@calebmarquart](https://github.com/calebmarquart)), Computer Software Engineering Student
+
+
+
 
 ## Contributing
 
