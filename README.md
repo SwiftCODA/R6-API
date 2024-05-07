@@ -183,7 +183,7 @@ Developer: Jarren Morris ([@SwiftCODA](https://github.com/swiftcoda)), Software 
 
 Developer: Caleb Marquart ([@calebmarquart](https://github.com/calebmarquart)), Computer Software Engineering Student
 
-
+Contributor: Pedro Calado Moura ([@feijoes](https://github.com/feijoes))
 
 
 ## Contributing
