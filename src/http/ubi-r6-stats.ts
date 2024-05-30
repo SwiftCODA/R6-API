@@ -78,9 +78,9 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
 
             // Convert textual platform to R6Platform.
             switch (user.platform) {
-                case 'uplay':   newPlatform = R6Platform.pc;    break
-                case 'psn':     newPlatform = R6Platform.psn;   break
-                case 'xbl':     newPlatform = R6Platform.xbox;  break
+                case R6RawPlatform.uplay:   newPlatform = R6Platform.pc;    break
+                case R6RawPlatform.psn:     newPlatform = R6Platform.psn;   break
+                case R6RawPlatform.xbl:     newPlatform = R6Platform.xbox;  break
                 default:        return internalError
             }
             
@@ -226,7 +226,16 @@ export async function RequestFullProfile(usernames: string, platform: R6Platform
  * @returns Array of R6Users.
  */
 async function RequestR6UserByUsername(usernames: string, platform: R6Platform, token: UbiToken): Promise<R6User[] | void> {
-    const params = `nameOnPlatform=${usernames}&platformType=${platform}`
+    let rawPlatform: R6RawPlatform
+
+    switch (platform) {
+        case R6Platform.pc:     rawPlatform = R6RawPlatform.uplay;  break
+        case R6Platform.psn:    rawPlatform = R6RawPlatform.psn;    break
+        case R6Platform.xbox:   rawPlatform = R6RawPlatform.xbl;    break
+        default:                throw Error('Bad platform specified.')
+    }
+
+    const params = `nameOnPlatform=${usernames}&platformType=${rawPlatform}`
     return await RequestR6User(params, token)
 }
 
@@ -341,7 +350,7 @@ async function RequestR6Operators(userId: string, profileId: string, platform: R
         case R6Platform.pc:     newPlatform = 'PC';             break
         case R6Platform.psn:    newPlatform = 'PLAYSTATION';    break
         case R6Platform.xbox:   newPlatform = 'XONE';           break
-        default:                return
+        default:                throw Error('Bad platform specified.')
     }
     
     const parameters = {
@@ -377,6 +386,10 @@ async function RequestR6Operators(userId: string, profileId: string, platform: R
             ranked: DefaultR6OperatorsGamemode,
             unranked: DefaultR6OperatorsGamemode,
             profileId: profileId
+        }
+
+        if (!data.profileData) {
+            return parsed
         }
 
         const profileData = new Map<string,R6OperatorsProfileData>(Object.entries(data.profileData))
